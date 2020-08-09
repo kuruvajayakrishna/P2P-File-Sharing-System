@@ -4,56 +4,86 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-#include "client_server.cpp"
+//#include "client_server.cpp"
 using namespace std;
 #define MAX_SIZE 65535
 #define CHUNK_SIZE 524288
 string username;
 string myip;
+string tracker_ip="";
+string tracker_port="";
+bool check_tracker_online(string filepath)
+{
+return true;
+}
 int main(int argc,char **argv)
 {
+    bool login_flag=false;
     string command;
-    //creating a thread for handling peer connections
-    pthread_t tid;
+    vector<string>split_command(10);
+    pthread_t tid;//creating a thread id for handling peer connections
+    //input command given by peer ./client <ip> <port> <file_name_containing info of all trackers>
     myip=argv[1];
 	string myport=argv[2];
-	int myport_i=atoi(myport.c_str());
+	int myport_i=stoi(myport);
 	string filepath=argv[3];
-    auto tid=pthread_create(&tid,NULL,ClientServer,&myport_i);
+    auto pid=pthread_create(&tid,NULL,ClientServer,&myport_i);
+    if(pid!=0)
+    {
+        perror("thread creation failed");
+		exit(-1);
+    }
+    //main thread handles commands entered by peer
     while(true)
     {
-      //main thread handles commands entered by peer
-
-      //creating socket
-      struct sockaddr_in remote_server;
-      int sock;
-      if(sock=socket(AF_INET,SOCK_STREAM,0)==-1)
-      {
-          perror("socket");
-          exit(-1);
-      }
-      remote_server.sin_family=AF_INET;
-	  remote_server.sin_port=htons(sp);
-	  remote_server.sin_addr.s_addr=inet_addr(si.c_str());
-	  bzero(&remote_server.sin_zero,8);
-
-	  if((connect(sock,(struct sockaddr*)&remote_server,sizeof(struct sockaddr_in)))==-1){
-		perror("connect");
-		exit(-1);
-     	}
-
        getline(cin,command);   
        stringstream user_command(command);
-       if(command_split=="login"){
-           string data="login "+username+" "+password+" "+to_string(myport_i)+" "+myip;
+       user_command>>split_command[0];
+       if(split_command[0]=="quit")
+         break;
+       if(!check_tracker_online(filepath))
+       {
+           cout<<"No tracker found online"<<endl;
+           continue;
+       }
+       if(split_command[0]=="login"){
+           if(login_flag)
+           {
+               cout<<"Already_logged_in"<<endl;
+               continue;
+           }
+           //Making connection with available tracker online
+           struct sockaddr_in tracker;
+           int sock;
+           if(sock=socket(AF_INET,SOCK_STREAM,0)==-1)
+            {
+                perror("socket");
+                exit(-1);
+            }
+           tracker.sin_family=AF_INET;
+           tracker.sin_port=htons(tracker_port);
+           tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
+           bzero(&tracker.sin_zero,8);
+           if((connect(sock,(struct sockaddr*)&tracker,sizeof(struct sockaddr_in)))==-1)
+            {
+                perror("connect");
+                exit(-1);
+            }
+           //command format login username password
+           user_command>>split_command[1];
+           user_command>>split_command[2];
+           string data="login "+split_command[1]+" "+split_command[2]+" "+to_string(myport_i)+" "+myip;
+           //sending data to tracker online
 	       send(sock,data.c_str(),data.size(),0);
 	       int len=recv(sock,output,MAX_SIZE,0);
+           close(sock);
 	       output[len]='\0';
            if(output[0]=='0')
                 cout<<"login Failed"<<endl;
            else
-                cout<<"successufully"
+                cout<<"successufully"<<endl;
        }
+       /*
        else if(command_split=="create_user"){
             string data="create_user "+username+" "+password+" "+to_string(myport_i)+" "+myip;
             send(sock,data.c_str(),data.size(),0);
@@ -161,6 +191,6 @@ int main(int argc,char **argv)
                 cout<<"Invalid Logout request"<<endl;
             else
                 cout<<"you logged_out"<<endl;
-       }     
+       }  */  
     }
 }
