@@ -25,9 +25,13 @@ pthread_mutex_t file_lock;
 pthread_mutex_t global_lock;
 
 int my_sequence_no;
+set<pair<string,string> > pending_group_requests;
 vector<pair<string,string>>tracker_info;
 unordered_map<string,string>user_credentails;
+unordered_map<string,string>groups;
+set<string>group_members;
 set<string>online;
+
 struct Message
 {
     int new_cli;
@@ -66,7 +70,7 @@ bool userlogin(string user_name,string password,string port,string ip)
     }
     return flag;
 }
-bool createuser(string user_name,string password,string port,string ip)
+bool create_user(string user_name,string password,string port,string ip)
 {
     bool flag;
     if(user_credentails.find(user_name)==user_credentails.end())
@@ -103,7 +107,7 @@ bool createuser(string user_name,string password,string port,string ip)
 		Sync(name,mysequence_i,tracker_info);
 		Sync(name1,mysequence_i,tracker_info);
 		Sync(name2,mysequence_i,tracker_info);*/
-		//getDetails();
+		//obtain_details();
         user_credentails[user_name]=password;
         cout<<user_credentails.size()<<endl;
 		flag=true;
@@ -115,16 +119,82 @@ bool createuser(string user_name,string password,string port,string ip)
     }
     return flag;
 }
-bool groupcreate()
-{}
+/*
+bool create_group(string group_id,string user_name)
+{
+    bool flag;
+    if(groups.find(group_id)==groups.end()){
+		//pthread_mutex_lock(&file_lock);
+		ofstream outfile("files/group.txt",ios::out|ios::app);
+		outfile<<group_id;
+		outfile<<" ";
+		outfile<<user_name;
+		outfile<<endl;
+		outfile.close();
+     	string name="files/group_"+group_id+".txt";
+		outfile.open(name,ios::out);
+		outfile<<user_name;
+		outfile<<endl;
+		outfile.close();
+		string name1=".all_files/.group_"+group_id+"_files.txt";
+		outfile.open(name1,ios::out);
+		outfile.close();
+		pthread_mutex_unlock(&file_lock);
+		Sync(".all_files/.group.txt",mysequence_i,tracker_info);
+		Sync(name,mysequence_i,tracker_info);
+		Sync(name1,mysequence_i,tracker_info);
+		obtain_details();
+		flag=true;
+	}
+	else
+		flag=false;
+    return flag;
+}
 string grouplist()
-{}
-string grouprequestlist()
-{}
+{
+    obtain_details();
+	string data="";
+	for(auto i:groups)
+		data=data+i.first+'\n';
+	return data;
+}
+string grouprequestlist(string group_id,string user_name)
+{
+    obtain_details();
+	string data="";
+    auto itr=groups.find(group_id);
+	if(itr==groups.end() || user_name!=itr->second)
+		return data;
+	else{
+		for(auto x:pending_group_requests){
+			if(x.second==command1){
+				data=data+x.first+'\n';
+			}
+		}
+    return data;
+}
 string groupfilelist()
 {}
-bool groupjoin()
-{}
+bool groupjoin(string group_id,string user_name)
+{
+    auto itr=groups.find(group_id);
+    if(itr==groups.end())
+      return false;
+    obtain_group_members();//pending function to be completed
+    if(group_members.find(user_name)!=group_members.end())
+        return true;//Already he is a member
+    else
+    {
+        pthread_mutex_lock(&file_lock);
+		ofstream outfile("files/pending.txt",ios::out|ios::app);
+		outfile<<user_name<<" "<<group_id<<endl;
+		outfile.close();
+		pending_group_requests.insert(make_pair(user_name,group_id));
+		pthread_mutex_unlock(&file_lock);
+    }
+    Sync("files/pending.txt",mysequence_i,tracker_info);
+	return true;
+}
 bool groupacceptrequest()
 {}
 bool groupfileupload()
@@ -148,7 +218,7 @@ string showdownloads()
 void completedownload()
 {}
 bool logout()
-{}
+{}*/
 void *handle_connections(void *pointer)
 {
     Message *message=(Message *)pointer;
@@ -162,7 +232,7 @@ void *handle_connections(void *pointer)
     string command(data);
     stringstream command_object(command);
     command_object>>split_command[0];
-    cout<<split_command[0]<<endl;
+    //cout<<split_command[0]<<endl;
     if(split_command[0]=="login"){
         cout<<"login request"<<endl;
         command_object>>split_command[1];//usr_name
@@ -180,15 +250,40 @@ void *handle_connections(void *pointer)
         command_object>>split_command[2];//password
         command_object>>split_command[3];//port
         command_object>>split_command[4];//ip
-        if(createuser(split_command[1],split_command[2],split_command[3],split_command[4]))
+        if(create_user(split_command[1],split_command[2],split_command[3],split_command[4]))
          send(message->new_cli,"1",1,0);
         else
          send(message->new_cli,"0",1,0);
     }/*
-    else if(split_command[0]=="create_group"){}
-    else if(split_command[0]=="list_groups"){}
-    else if(split_command[0]=="join_group"){}
-    else if(split_command[0]=="list_requests"){}
+    else if(split_command[0]=="create_group"){
+        command_object>>split_command[1];//usr_name
+        command_object>>split_command[2];//password
+        if(create_group(split_command[1],split_command[2]))
+         send(message->new_cli,"1",1,0);
+        else
+         send(message->new_cli,"0",1,0);
+    }
+    else if(split_command[0]=="list_groups"){
+        string group_lists=list_groups();
+        send(message->new_cli,group_lists.c_str(),group_lists.size(),0);
+    }
+    else if(split_command[0]=="join_group"){
+        command_object>>split_command[1];
+        command_object>>split_command[2];
+        if(join_group(split_command[1],split_command[2]))
+         send(message->new_cli,"1",1,0);
+        else
+         send(message->new_cli,"0",1,0);
+    }
+    else if(split_command[0]=="list_requests"){
+        command_object>>split_command[1];
+        command_object>>split_command[2];
+        if(grouprequestlist(split_command[1],split_command[2]))
+         send(message->new_cli,data,sizeof(data),0);
+	}
+
+	return data;
+    }
     else if(split_command[0]=="show_downloads"){}
     else if(split_command[0]=="download_file"){}
     else if(split_command[0]=="stop_share"){}
