@@ -1,17 +1,28 @@
-#include<bits/stdc++.h>
-#include<sys/socket.h>
-#include<error.h>
+#include<iostream>
+#include <errno.h>
+#include <unistd.h>
 #include <arpa/inet.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-//#include "client_server.cpp"
+#include <string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <fstream>
+#include <sstream>
+#include <unordered_map>
+#include <string>
+#include <vector>
+#include <set>
+#include <stdio.h>
+#include <stdlib.h>
+#include <utility>
 using namespace std;
 #define MAX_SIZE 65535
 #define CHUNK_SIZE 524288
 string username;
 string myip;
-string tracker_ip="";
-string tracker_port="";
+string tracker_ip="127.0.0.1";
+int tracker_port=1047;
 bool check_tracker_online(string filepath)
 {
 return true;
@@ -27,12 +38,12 @@ int main(int argc,char **argv)
 	string myport=argv[2];
 	int myport_i=stoi(myport);
 	string filepath=argv[3];
-    auto pid=pthread_create(&tid,NULL,ClientServer,&myport_i);
+    /*auto pid=pthread_create(&tid,NULL,ClientServer,&myport_i);
     if(pid!=0)
     {
         perror("thread creation failed");
 		exit(-1);
-    }
+    }*/
     //main thread handles commands entered by peer
     while(true)
     {
@@ -55,11 +66,12 @@ int main(int argc,char **argv)
            //Making connection with available tracker online
            struct sockaddr_in tracker;
            int sock;
-           if(sock=socket(AF_INET,SOCK_STREAM,0)==-1)
+           if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
             {
                 perror("socket");
                 exit(-1);
             }
+           char output[MAX_SIZE];
            tracker.sin_family=AF_INET;
            tracker.sin_port=htons(tracker_port);
            tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
@@ -70,8 +82,8 @@ int main(int argc,char **argv)
                 exit(-1);
             }
            //command format login username password
-           user_command>>split_command[1];
-           user_command>>split_command[2];
+           user_command>>split_command[1];//usr_name
+           user_command>>split_command[2];//password
            string data="login "+split_command[1]+" "+split_command[2]+" "+to_string(myport_i)+" "+myip;
            //sending data to tracker online
 	       send(sock,data.c_str(),data.size(),0);
@@ -81,19 +93,41 @@ int main(int argc,char **argv)
            if(output[0]=='0')
                 cout<<"login Failed"<<endl;
            else
-                cout<<"successufully"<<endl;
+                cout<<"successfully"<<endl;
        }
-       /*
-       else if(command_split=="create_user"){
-            string data="create_user "+username+" "+password+" "+to_string(myport_i)+" "+myip;
-            send(sock,data.c_str(),data.size(),0);
-            int len=recv(sock,output,MAX_SIZE,0);
-            output[len]='\0';
+       else if(split_command[0]=="create_user"){
+           //Making connection with available tracker online
+           struct sockaddr_in tracker;
+           int sock;
+           if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
+            {
+                perror("socket");
+                exit(-1);
+            }
+           char output[MAX_SIZE];
+           tracker.sin_family=AF_INET;
+           tracker.sin_port=htons(tracker_port);
+           tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
+           bzero(&tracker.sin_zero,8);
+           if((connect(sock,(struct sockaddr*)&tracker,sizeof(struct sockaddr_in)))==-1)
+            {
+                perror("connect");
+                exit(-1);
+            }
+           //command format login username password
+           user_command>>split_command[1];//usr_name
+           user_command>>split_command[2];//password
+           string data="create_user "+split_command[1]+" "+split_command[2]+" "+to_string(myport_i)+" "+myip;
+           //sending data to tracker online
+	       send(sock,data.c_str(),data.size(),0);
+	       int len=recv(sock,output,MAX_SIZE,0);
+           close(sock);
+	       output[len]='\0';
             if(output[0]=='0')
                 cout<<"Invalid create user request "<<endl;
             else
                 cout<<"successfully created_user"<<endl;
-       }
+       }/*
        else if(command_split=="create_group"){
             string data="create_group "+groupname+" "+username;
             send(sock,data.c_str(),data.size(),0);
