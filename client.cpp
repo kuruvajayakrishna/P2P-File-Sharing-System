@@ -19,7 +19,7 @@
 using namespace std;
 #define MAX_SIZE 65535
 #define CHUNK_SIZE 524288
-string username;
+string user_name;
 string myip;
 string tracker_ip="127.0.0.1";
 int tracker_port=1047;
@@ -93,7 +93,10 @@ int main(int argc,char **argv)
            if(output[0]=='0')
                 cout<<"login Failed"<<endl;
            else
+           {
                 cout<<"successfully"<<endl;
+                user_name=split_command[1];
+           }
        }
        else if(split_command[0]=="create_user"){
            //Making connection with available tracker online
@@ -127,9 +130,28 @@ int main(int argc,char **argv)
                 cout<<"Invalid create user request "<<endl;
             else
                 cout<<"successfully created_user"<<endl;
-       }/*
+       }
        else if(command_split=="create_group"){
-            string data="create_group "+groupname+" "+username;
+           struct sockaddr_in tracker;
+           int sock;
+           if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
+            {
+                perror("socket");
+                exit(-1);
+            }
+           char output[MAX_SIZE];
+           tracker.sin_family=AF_INET;
+           tracker.sin_port=htons(tracker_port);
+           tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
+           bzero(&tracker.sin_zero,8);
+           if((connect(sock,(struct sockaddr*)&tracker,sizeof(struct sockaddr_in)))==-1)
+            {
+                perror("connect");
+                exit(-1);
+            }
+            //command format create_group group_id
+            user_command>>split_command[1];//group_id
+            string data="create_user "+split_command[1]+" "+user_name;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
             output[len]='\0';
@@ -137,8 +159,26 @@ int main(int argc,char **argv)
                 cout<<"Invalid create group request "<<endl;
             else
                 cout<<"successfully created group"<<endl;
-       }
+       }/*
        else if(command_split=="list_groups"){
+           struct sockaddr_in tracker;
+           int sock;
+           if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
+            {
+                perror("socket");
+                exit(-1);
+            }
+           char output[MAX_SIZE];
+           tracker.sin_family=AF_INET;
+           tracker.sin_port=htons(tracker_port);
+           tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
+           bzero(&tracker.sin_zero,8);
+           if((connect(sock,(struct sockaddr*)&tracker,sizeof(struct sockaddr_in)))==-1)
+            {
+                perror("connect");
+                exit(-1);
+            }
+           //command format list_groups
            string data="list_groups";
            send(sock,data.c_str(),data.size(),0);
            int len=recv(sock,output,MAX_SIZE,0);
@@ -148,17 +188,55 @@ int main(int argc,char **argv)
            cout<<"#####  #####"<<endl;
        }
        else if(command_split=="join_group"){
-           	string data="join_group "+groupname+" "+username;
+           struct sockaddr_in tracker;
+           int sock;
+           if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
+            {
+                perror("socket");
+                exit(-1);
+            }
+           char output[MAX_SIZE];
+           tracker.sin_family=AF_INET;
+           tracker.sin_port=htons(tracker_port);
+           tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
+           bzero(&tracker.sin_zero,8);
+           if((connect(sock,(struct sockaddr*)&tracker,sizeof(struct sockaddr_in)))==-1)
+            {
+                perror("connect");
+                exit(-1);
+            }
+            //command format join_group group_id
+            user_command>>split_command[1];
+           	string data="join_group "+split_command[1]+" "+user_name;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
             output[len]='\0';
             if(output[0]=='0')
-                cout<<"Failure in joining of group "<<endl;
+                cout<<"Group doen't exists "<<endl;
             else
                cout<<"successfully joined group"<<endl;
        }
        else if(command_split=="list_requests"){
-            string data="list_requests "+groupname+" "+username;
+           struct sockaddr_in tracker;
+           int sock;
+           if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
+            {
+                perror("socket");
+                exit(-1);
+            }
+           char output[MAX_SIZE];
+           tracker.sin_family=AF_INET;
+           tracker.sin_port=htons(tracker_port);
+           tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
+           bzero(&tracker.sin_zero,8);
+           if((connect(sock,(struct sockaddr*)&tracker,sizeof(struct sockaddr_in)))==-1)
+            {
+                perror("connect");
+                exit(-1);
+            }
+            //command format for list_request group_id
+            user_command>>split_command[1];
+           	string data="join_group "+split_command[1]+" "+user_name;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
             output[len]='\0';
@@ -197,7 +275,27 @@ int main(int argc,char **argv)
        }
        else if(command_split=="upload_file"){}///upload file pending
        else if(command_split=="accept_request"){
-            string data="accept_request "+groupname+" "+username1+" "+username;
+           struct sockaddr_in tracker;
+           int sock;
+           if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
+            {
+                perror("socket");
+                exit(-1);
+            }
+           char output[MAX_SIZE];
+           tracker.sin_family=AF_INET;
+           tracker.sin_port=htons(tracker_port);
+           tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
+           bzero(&tracker.sin_zero,8);
+           if((connect(sock,(struct sockaddr*)&tracker,sizeof(struct sockaddr_in)))==-1)
+            {
+                perror("connect");
+                exit(-1);
+            }
+            //command format accept_request group_id username
+            user_command>>split_command[1];
+            user_command>>split_command[2];
+            string data="accept_request "+split_command[1]+" "+split_command[2]+" "+username;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
             output[len]='\0';
@@ -207,7 +305,26 @@ int main(int argc,char **argv)
                 cout<<"successfully accepted"<<endl;
        }
        else if(command_split=="leave_group"){
-            string data="leave_group "+groupname+" "+username;
+           struct sockaddr_in tracker;
+           int sock;
+           if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
+            {
+                perror("socket");
+                exit(-1);
+            }
+           char output[MAX_SIZE];
+           tracker.sin_family=AF_INET;
+           tracker.sin_port=htons(tracker_port);
+           tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
+           bzero(&tracker.sin_zero,8);
+           if((connect(sock,(struct sockaddr*)&tracker,sizeof(struct sockaddr_in)))==-1)
+            {
+                perror("connect");
+                exit(-1);
+            }
+            //command format leave_group group_id
+            user_command>>split_command[1];
+           	string data="leave_group "+split_command[1]+" "+user_name;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
             output[len]='\0';
@@ -217,6 +334,23 @@ int main(int argc,char **argv)
                 cout<<"succussfully left_out of group"<<endl;
        }
        else if(command_split=="logout"){
+           struct sockaddr_in tracker;
+           int sock;
+           if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
+            {
+                perror("socket");
+                exit(-1);
+            }
+           char output[MAX_SIZE];
+           tracker.sin_family=AF_INET;
+           tracker.sin_port=htons(tracker_port);
+           tracker.sin_addr.s_addr=inet_addr(tracker_ip.c_str());
+           bzero(&tracker.sin_zero,8);
+           if((connect(sock,(struct sockaddr*)&tracker,sizeof(struct sockaddr_in)))==-1)
+            {
+                perror("connect");
+                exit(-1);
+            }
            	string data="logout "+username;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
