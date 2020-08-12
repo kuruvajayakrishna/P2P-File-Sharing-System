@@ -167,7 +167,7 @@ string grouprequestlist(string group_id,string user_name)
 		return data;
 	else{
 		for(auto x:pending_group_requests){
-			if(x.second==command1){
+			if(x.second==group_id){
 				data=data+x.first+'\n';
 			}
 		}
@@ -195,14 +195,62 @@ bool groupjoin(string group_id,string user_name)
     Sync("files/pending.txt",mysequence_i,tracker_info);
 	return true;
 }
-bool groupacceptrequest()
-{}
+bool acceptrequest(string group_id,string user_name,string owner_name)
+{
+    auto itr=groups.find(group_id);
+	auto itr1=user_credentials.find(user_name);
+	auto itr2=pending_group_requests.find(make_pair(user_name,group_id));
+	if(itr==groups.end() || itr->second != owner_name || itr1==user_credentials.end() || itr2==pending_group_requests.end())
+		return false;
+	obtain_group_members(group_id);
+	if(group_members.find(user_name)!=group_members.end()){
+		// cout<<"Already Memeber"<<endl;
+		return true;
+	}
+	string name="files/group_"+group_id+".txt";
+	string remove_line=user_name+" "+group_id;
+	pthread_mutex_lock(&file_lock);
+	ofstream outfile(name,ios::out|ios::app);
+	outfile<<user_name<<endl;
+	outfile.close();
+	pthread_mutex_unlock(&file_lock);
+
+	DeleteLine("files/pending.txt",remove_line);
+
+	Sync("files/pending.txt",mysequence_i,tracker_info);
+	Sync(name,mysequence_i,tracker_info);
+	return true;
+}
 bool groupfileupload()
 {}
 bool groupstopshare()
 {}
-bool groupleave()
-{}
+bool Leave_group(string group_id,string user_name)
+{
+    auto iter=groups.find(group_id);
+	if(iter==groups.end())
+		return false;
+
+	obtain_group_members(group_id);
+	if(group_members.find(user_name)==group_members.end() || iter->second==user_name){
+		return false;
+	}
+	
+	string name1=".all_files/.group_"+group_id+".txt";
+	string name2=".all_files/.group_"+group_id+"_files.txt";
+	string name3=".all_files/.files_"+user_name+".txt";
+
+	DeleteLine(name1,user_name,0);
+	DeleteLine(name2,user_name,2);
+	DeleteLine(name3,group_id,0);
+
+	Sync(name1,mysequence_i,tracker_info);
+	Sync(name2,mysequence_i,tracker_info);
+	Sync(name3,mysequence_i,tracker_info);
+
+	obtain_details();
+	return true;
+}
 string sendSHA()
 {}
 string sendseeder()
@@ -217,8 +265,20 @@ string showdownloads()
 {}
 void completedownload()
 {}
-bool logout()
-{}*/
+bool Logout(string user_name)
+{
+    bool flag;
+    obtain_details();
+	if(online.find(user_name)!=online.end()){
+		DeleteLine(".all_files/.online.txt",user_name,0);
+		Sync(".all_files/.online.txt",mysequence_i,tracker_info);
+		obtain_details();
+		flag=true;
+	}
+	else
+		flag=false;
+    return flag;
+}*/
 void *handle_connections(void *pointer)
 {
     Message *message=(Message *)pointer;
@@ -288,9 +348,31 @@ void *handle_connections(void *pointer)
     else if(split_command[0]=="download_file"){}
     else if(split_command[0]=="stop_share"){}
     else if(split_command[0]=="upload_file"){}
-    else if(split_command[0]=="accept_request"){}
-    else if(split_command[0]=="leave_group"){}
-    else if(split_command[0]=="logout"){}
+    else if(split_command[0]=="accept_request"){
+        command_object>>split_command[1];
+        command_object>>split_command[2];
+        command_object>>split_command[3];
+        if(accept_request(split_command[1],split_command[2],split_command[2]))
+          send(message->new_cli,"1",1,0);
+        else
+          send(message->new_cli,"0",1,0);
+    }
+    else if(split_command[0]=="leave_group"){
+        command_object>>split_command[1];
+		command_object>>split_command[2];
+		if(Leave_group(message->new_cli,split_command[1],split_command[2])){
+			send(message->new_cli,"1",1,0);
+		}
+		else
+			send(message->new_cli,"0",1,0);
+    }
+    else if(split_command[0]=="logout"){
+        command_object>>split_command[1];
+		if(Logout(split_command[1]))
+			send(message->new_cli,"1",1,0);
+		else
+			send(message->new_cli,"0",1,0);
+    }
     else if(split_command[0]==""){}//
     else if(split_command[0]==""){}//many other functionalities*/
     close(message->new_cli);
