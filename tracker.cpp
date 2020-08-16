@@ -27,7 +27,7 @@ pthread_mutex_t global_lock;
 int my_sequence_no;
 set<pair<string,string> > pending_group_requests;
 vector<pair<string,string>>tracker_info;
-unordered_map<string,string>user_credentails;
+unordered_map<string,string>user_credentials;
 unordered_map<string,string>groups;
 set<string>group_members;
 set<string>online;
@@ -39,15 +39,126 @@ struct Message
 	string client_ip;
 	string client_port;
 };
+vector<string> tokenize(string s,char delimiter)
+{
+    string temp="";
+    int i=0;
+    vector<string>v;
+    while(i<s.length())
+    {
+        if(s[i]!=delimiter)
+        {
+            temp+=s[i];
+        }
+        else
+        {
+            v.push_back(temp);
+            temp="";
+        }
+        i++;
+    }
+    if(temp!="")v.push_back(temp);
+    return v;
+}
+void obtain_details()
+{
+    user_credentials.clear();
+	online.clear();
+	//online_users.clear();
+	groups.clear();
+	pending_group_requests.clear();
+	string line,info1,info2;
+
+	//CheckDir();
+	
+	//pthread_mutex_lock(&file_lock);
+    //updating user_credentials
+	ifstream infile("files/user_details.txt",ios::in);
+	if(infile){
+		while(getline(infile,line)){
+			stringstream line_object(line);
+			line_object>>info1;
+			line_object>>info2;
+			user_credentials[info1]=info2;
+		}
+		infile.close();
+	}
+	else{
+		infile.close();
+		ofstream outfile("files/user_details.txt",ios::out);
+		outfile.close();
+	}
+    /*
+    //updating online_users
+	infile.open(".all_files/.online.txt",ios::in);
+	if(infile){
+		while(getline(infile,line)){
+			vector<string> split_vector=split(line,' ');
+			online.insert(split_vector[0]);
+			online_users[split_vector[0] ]=make_pair(split_vector[1],split_vector[2]);
+		}
+		infile.close();
+	}
+	else{
+		infile.close();
+		ofstream outfile(".all_files/.online.txt",ios::out);
+		outfile.close();
+	}*/
+    //updating group info into group set
+	infile.open("files/group.txt",ios::in);
+	if(infile){
+		while(getline(infile,line)){
+			vector<string> split_vector=tokenize(line,' ');
+			groups[split_vector[0] ]=split_vector[1];
+		}
+		infile.close();
+	}
+	else{
+		infile.close();
+		ofstream outfile("files/group.txt",ios::out);
+		outfile.close();
+	}
+    //updating pending group requests
+	infile.open("files/pending.txt",ios::in);
+	if(infile){
+		while(getline(infile,line)){
+			stringstream line_object(line);
+			line_object>>info1;
+			line_object>>info2;
+
+			pending_group_requests.insert(make_pair(info1,info2));
+		}
+		infile.close();
+	}
+	else{
+		infile.close();
+		ofstream outfile("files/pending.txt",ios::out);
+		outfile.close();
+	}
+	//pthread_mutex_unlock(&file_lock);
+}
+
+void obtain_group_members(string group_name){
+	//pthread_mutex_lock(&file_lock);
+	string name="files/group_"+group_name+".txt";
+	string line;
+	group_members.clear();
+	ifstream infile(name,ios::in);
+	while(getline(infile,line)){
+		group_members.insert(line);
+	}
+	//pthread_mutex_unlock(&file_lock);
+}
 
 bool userlogin(string user_name,string password,string port,string ip)
 {
     bool flag;
-    if(user_credentails.find(user_name)==user_credentails.end())
+    obtain_details();
+    if(user_credentials.find(user_name)==user_credentials.end())
      return false;
     else
     {
-        if(password==user_credentails[user_name])
+        if(password==user_credentials[user_name])
         {
             if(online.find(user_name)==online.end())
             {
@@ -73,7 +184,7 @@ bool userlogin(string user_name,string password,string port,string ip)
 bool create_user(string user_name,string password,string port,string ip)
 {
     bool flag;
-    if(user_credentails.find(user_name)==user_credentails.end())
+    if(user_credentials.find(user_name)==user_credentials.end())
     {
         cout<<"creating files"<<endl;
         //pthread_mutex_lock(&file_lock);
@@ -108,8 +219,8 @@ bool create_user(string user_name,string password,string port,string ip)
 		Sync(name1,mysequence_i,tracker_info);
 		Sync(name2,mysequence_i,tracker_info);*/
 		//obtain_details();
-        user_credentails[user_name]=password;
-        cout<<user_credentails.size()<<endl;
+        user_credentials[user_name]=password;
+        cout<<user_credentials.size()<<endl;
 		flag=true;
 	}
     else
@@ -119,7 +230,7 @@ bool create_user(string user_name,string password,string port,string ip)
     }
     return flag;
 }
-/*
+
 bool create_group(string group_id,string user_name)
 {
     bool flag;
@@ -136,14 +247,14 @@ bool create_group(string group_id,string user_name)
 		outfile<<user_name;
 		outfile<<endl;
 		outfile.close();
-		string name1=".all_files/.group_"+group_id+"_files.txt";
+		string name1="files/group_"+group_id+"_files.txt";
 		outfile.open(name1,ios::out);
 		outfile.close();
-		pthread_mutex_unlock(&file_lock);
+		/*pthread_mutex_unlock(&file_lock);
 		Sync(".all_files/.group.txt",mysequence_i,tracker_info);
 		Sync(name,mysequence_i,tracker_info);
 		Sync(name1,mysequence_i,tracker_info);
-		obtain_details();
+		obtain_details();*/
 		flag=true;
 	}
 	else
@@ -157,7 +268,7 @@ string grouplist()
 	for(auto i:groups)
 		data=data+i.first+'\n';
 	return data;
-}
+}/*
 string grouprequestlist(string group_id,string user_name)
 {
     obtain_details();
@@ -198,7 +309,7 @@ bool groupjoin(string group_id,string user_name)
 bool acceptrequest(string group_id,string user_name,string owner_name)
 {
     auto itr=groups.find(group_id);
-	auto itr1=user_credentials.find(user_name);
+	auto itr1=user_user_credentials.find(user_name);
 	auto itr2=pending_group_requests.find(make_pair(user_name,group_id));
 	if(itr==groups.end() || itr->second != owner_name || itr1==user_credentials.end() || itr2==pending_group_requests.end())
 		return false;
@@ -314,7 +425,7 @@ void *handle_connections(void *pointer)
          send(message->new_cli,"1",1,0);
         else
          send(message->new_cli,"0",1,0);
-    }/*
+    }
     else if(split_command[0]=="create_group"){
         command_object>>split_command[1];//usr_name
         command_object>>split_command[2];//password
@@ -322,7 +433,7 @@ void *handle_connections(void *pointer)
          send(message->new_cli,"1",1,0);
         else
          send(message->new_cli,"0",1,0);
-    }
+    }/*
     else if(split_command[0]=="list_groups"){
         string group_lists=list_groups();
         send(message->new_cli,group_lists.c_str(),group_lists.size(),0);
