@@ -81,7 +81,7 @@ int main(int argc,char **argv)
                 perror("connect");
                 exit(-1);
             }
-           //command format login username password
+           //command format login user_name password
            user_command>>split_command[1];//usr_name
            user_command>>split_command[2];//password
            string data="login "+split_command[1]+" "+split_command[2]+" "+to_string(myport_i)+" "+myip;
@@ -117,7 +117,7 @@ int main(int argc,char **argv)
                 perror("connect");
                 exit(-1);
             }
-           //command format login username password
+           //command format login user_name password
            user_command>>split_command[1];//usr_name
            user_command>>split_command[2];//password
            string data="create_user "+split_command[1]+" "+split_command[2]+" "+to_string(myport_i)+" "+myip;
@@ -131,7 +131,7 @@ int main(int argc,char **argv)
             else
                 cout<<"successfully created_user"<<endl;
        }
-       else if(command_split=="create_group"){
+       else if(split_command[0]=="create_group"){
            struct sockaddr_in tracker;
            int sock;
            if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
@@ -159,8 +159,8 @@ int main(int argc,char **argv)
                 cout<<"Invalid create group request "<<endl;
             else
                 cout<<"successfully created group"<<endl;
-       }/*
-       else if(command_split=="list_groups"){
+       }
+       else if(split_command[0]=="list_groups"){
            struct sockaddr_in tracker;
            int sock;
            if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
@@ -187,7 +187,7 @@ int main(int argc,char **argv)
            cout<<output<<endl;
            cout<<"#####  #####"<<endl;
        }
-       else if(command_split=="join_group"){
+       else if(split_command[0]=="join_group"){
            struct sockaddr_in tracker;
            int sock;
            if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
@@ -216,7 +216,7 @@ int main(int argc,char **argv)
             else
                cout<<"successfully joined group"<<endl;
        }
-       else if(command_split=="list_requests"){
+       else if(split_command[0]=="list_requests"){
            struct sockaddr_in tracker;
            int sock;
            if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
@@ -243,9 +243,9 @@ int main(int argc,char **argv)
             cout<<"##### List of Requests #####"<<endl<<endl;
             cout<<output<<endl;
             cout<<"#####  #####"<<endl;
-       }
-       else if(command_split=="show_downloads"){
-            string data="show_downloads "+username;
+       }/*
+       else if(split_command[0]=="show_downloads"){
+            string data="show_downloads "+user_name;
         	send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
             output[len]='\0';
@@ -253,8 +253,8 @@ int main(int argc,char **argv)
             cout<<output<<endl;
             cout<<"#####  #####"<<endl;
        }
-       else if(command_split=="download_file"){}/////Download file pending
-       else if(command_split=="list_files"){
+       else if(split_command[0]=="download_file"){}/////Download file pending
+       else if(split_command[0]=="list_files"){
             string data="list_files "+groupname;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
@@ -263,8 +263,8 @@ int main(int argc,char **argv)
             cout<<output<<endl;
             cout<<"#####  #####"<<endl;
        }
-       else if(command_split=="stop_share"){
-            string data="stop_share "+groupname+" "+filename+" "+username;
+       else if(split_command[0]=="stop_share"){
+            string data="stop_share "+groupname+" "+filename+" "+user_name;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
             output[len]='\0';
@@ -273,8 +273,8 @@ int main(int argc,char **argv)
             else
                 cout<<"successfully stopped sharing"<<endl;
        }
-       else if(command_split=="upload_file"){}///upload file pending
-       else if(command_split=="accept_request"){
+       else if(split_command[0]=="upload_file"){}///upload file pending*/
+       else if(split_command[0]=="accept_request"){
            struct sockaddr_in tracker;
            int sock;
            if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
@@ -292,10 +292,10 @@ int main(int argc,char **argv)
                 perror("connect");
                 exit(-1);
             }
-            //command format accept_request group_id username
+            //command format accept_request group_id user_name
             user_command>>split_command[1];
             user_command>>split_command[2];
-            string data="accept_request "+split_command[1]+" "+split_command[2]+" "+username;
+            string data="accept_request "+split_command[1]+" "+split_command[2]+" "+user_name;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
             output[len]='\0';
@@ -304,7 +304,7 @@ int main(int argc,char **argv)
             else
                 cout<<"successfully accepted"<<endl;
        }
-       else if(command_split=="leave_group"){
+       else if(split_command[0]=="leave_group"){
            struct sockaddr_in tracker;
            int sock;
            if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
@@ -333,7 +333,7 @@ int main(int argc,char **argv)
             else
                 cout<<"succussfully left_out of group"<<endl;
        }
-       else if(command_split=="logout"){
+       else if(split_command[0]=="logout"){
            struct sockaddr_in tracker;
            int sock;
            if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
@@ -351,7 +351,7 @@ int main(int argc,char **argv)
                 perror("connect");
                 exit(-1);
             }
-           	string data="logout "+username;
+           	string data="logout "+user_name;
             send(sock,data.c_str(),data.size(),0);
             int len=recv(sock,output,MAX_SIZE,0);
             output[len]='\0';
@@ -359,6 +359,6 @@ int main(int argc,char **argv)
                 cout<<"Invalid Logout request"<<endl;
             else
                 cout<<"you logged_out"<<endl;
-       }  */  
+       }   
     }
 }
