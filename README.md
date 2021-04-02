@@ -1,1 +1,1 @@
-# peer_to_peer_groupbased_file_sharing_system
+Peer-to-peer file sharing system implemented using socket programming and multithreading in C++. Peers can upload and download text and multimedia files using custom format for torrent files called…
